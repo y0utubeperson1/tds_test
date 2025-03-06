@@ -1,0 +1,3 @@
+tsdproxy/data/*.*
+!tsdproxy/data/.gitkeep
+!tsdproxy/config/tdsproxy.yaml

@@ -1,0 +1,56 @@
+# remember to create all needed directories
+
+networks:
+  my_network:
+    driver: bridge
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: jellyfin
+    networks:
+      - my_network
+    restart: "unless-stopped"
+
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    networks:
+      - my_network
+    restart: unless-stopped
+
+  nginx_router:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: nginx_router
+    hostname: nginx_router
+    environment:
+      - MY_DOMAIN=localhost
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - my_network
+    labels:
+      - tsdproxy.enable=true
+      - tsdproxy.name=nginx_router
+      - tsdproxy.container_port=80
+    restart: unless-stopped
+
+  tsdproxy:
+    image: almeidapaulopt/tsdproxy:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./tsdproxy/data:/data
+      - ./tsdproxy/config:/config
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    labels:
+      - tsdproxy.enable=true
+      - tsdproxy.name=tds_proxy

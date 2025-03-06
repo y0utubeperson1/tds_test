@@ -1,0 +1,41 @@
+
+# Use both Tailscale and Docker DNS resolvers
+resolver 100.100.100.100 127.0.0.11 valid=30s;
+
+upstream nextcloud_upstream { server nextcloud:80; }
+upstream jellyfin_upstream { server jellyfin:8096; }
+
+server {
+    listen 80 default_server;
+    #listen 443 ssl default_server;
+    server_name _;  # Accept any server name
+
+    #ssl_certificate /etc/nginx/certs/certificate.crt;
+    #ssl_certificate_key /etc/nginx/certs/certificate.key;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    location / {
+        set $target '';
+        set $subdomain $hostname;
+        if ($host ~ "^([^.]+)\.") {
+            set $subdomain $1;
+        }
+
+        if ($subdomain = 'nextcloud') {
+            set $target 'http://nextcloud_upstream';
+        }
+        if ($subdomain = 'jellyfin') {
+            set $target 'http://jellyfin_upstream';
+        }
+
+        if ($target = '') {
+            return 404;
+        }
+
+        proxy_pass $target;
+    }
+}
